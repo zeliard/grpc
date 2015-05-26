@@ -31,34 +31,31 @@
  *
  */
 
-#include <stdio.h>
-#include <string.h>
+#ifndef GRPC_TEST_CPP_UTIL_SUBPROCESS_H
+#define GRPC_TEST_CPP_UTIL_SUBPROCESS_H
 
-#include <grpc/support/alloc.h>
-#include <grpc/support/log.h>
+#include <initializer_list>
+#include <string>
 
-#include "src/core/support/env.h"
-#include "src/core/support/string.h"
-#include "test/core/util/test_config.h"
+struct gpr_subprocess;
 
-#define LOG_TEST_NAME(x) gpr_log(GPR_INFO, "%s", x)
+namespace grpc {
 
-static void test_setenv_getenv(void) {
-  const char *name = "FOO";
-  const char *value = "BAR";
-  char *retrieved_value;
+class SubProcess {
+ public:
+  SubProcess(std::initializer_list<std::string> args);
+  ~SubProcess();
 
-  LOG_TEST_NAME("test_setenv_getenv");
+  int Join();
+  void Interrupt();
 
-  gpr_setenv(name, value);
-  retrieved_value = gpr_getenv(name);
-  GPR_ASSERT(retrieved_value != NULL);
-  GPR_ASSERT(strcmp(value, retrieved_value) == 0);
-  gpr_free(retrieved_value);
-}
+ private:
+  SubProcess(const SubProcess& other);
+  SubProcess& operator=(const SubProcess& other);
 
-int main(int argc, char **argv) {
-  grpc_test_init(argc, argv);
-  test_setenv_getenv();
-  return 0;
-}
+  gpr_subprocess* const subprocess_;
+};
+
+}  // namespace grpc
+
+#endif  // GRPC_TEST_CPP_UTIL_SUBPROCESS_H

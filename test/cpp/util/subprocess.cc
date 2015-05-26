@@ -31,34 +31,29 @@
  *
  */
 
-#include <stdio.h>
-#include <string.h>
+#include "test/cpp/util/subprocess.h"
 
-#include <grpc/support/alloc.h>
-#include <grpc/support/log.h>
+#include <vector>
 
-#include "src/core/support/env.h"
-#include "src/core/support/string.h"
-#include "test/core/util/test_config.h"
+#include <grpc/support/subprocess.h>
 
-#define LOG_TEST_NAME(x) gpr_log(GPR_INFO, "%s", x)
+namespace grpc {
 
-static void test_setenv_getenv(void) {
-  const char *name = "FOO";
-  const char *value = "BAR";
-  char *retrieved_value;
-
-  LOG_TEST_NAME("test_setenv_getenv");
-
-  gpr_setenv(name, value);
-  retrieved_value = gpr_getenv(name);
-  GPR_ASSERT(retrieved_value != NULL);
-  GPR_ASSERT(strcmp(value, retrieved_value) == 0);
-  gpr_free(retrieved_value);
+static gpr_subprocess *MakeProcess(std::initializer_list<std::string> args) {
+  std::vector<const char *> vargs;
+  for (auto it = args.begin(); it != args.end(); ++it) {
+    vargs.push_back(it->c_str());
+  }
+  return gpr_subprocess_create(vargs.size(), &vargs[0]);
 }
 
-int main(int argc, char **argv) {
-  grpc_test_init(argc, argv);
-  test_setenv_getenv();
-  return 0;
-}
+SubProcess::SubProcess(std::initializer_list<std::string> args)
+    : subprocess_(MakeProcess(args)) {}
+
+SubProcess::~SubProcess() { gpr_subprocess_destroy(subprocess_); }
+
+int SubProcess::Join() { return gpr_subprocess_join(subprocess_); }
+
+void SubProcess::Interrupt() { gpr_subprocess_interrupt(subprocess_); }
+
+}  // namespace grpc
