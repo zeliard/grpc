@@ -31,11 +31,39 @@
  *
  */
 
-#ifndef GRPC_INTERNAL_CORE_SECURITY_AUTH_H
-#define GRPC_INTERNAL_CORE_SECURITY_AUTH_H
+#include <gflags/gflags.h>
+#include "test/cpp/util/benchmark_config.h"
 
-#include "src/core/channel/channel_stack.h"
+DEFINE_bool(enable_log_reporter, true,
+            "Enable reporting of benchmark results through GprLog");
 
-extern const grpc_channel_filter grpc_client_auth_filter;
+// In some distros, gflags is in the namespace google, and in some others,
+// in gflags. This hack is enabling us to find both.
+namespace google {}
+namespace gflags {}
+using namespace google;
+using namespace gflags;
 
-#endif  /* GRPC_INTERNAL_CORE_SECURITY_AUTH_H */
+namespace grpc {
+namespace testing {
+
+void InitBenchmark(int* argc, char*** argv, bool remove_flags) {
+  ParseCommandLineFlags(argc, argv, remove_flags);
+}
+
+static std::shared_ptr<Reporter> InitBenchmarkReporters() {
+  auto* composite_reporter = new CompositeReporter;
+  if (FLAGS_enable_log_reporter) {
+    composite_reporter->add(
+        std::unique_ptr<Reporter>(new GprLogReporter("LogReporter")));
+  }
+  return std::shared_ptr<Reporter>(composite_reporter);
+}
+
+std::shared_ptr<Reporter> GetReporter() {
+  static std::shared_ptr<Reporter> reporter(InitBenchmarkReporters());
+  return reporter;
+}
+
+}  // namespace testing
+}  // namespace grpc
